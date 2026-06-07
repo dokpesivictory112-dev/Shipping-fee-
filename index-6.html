@@ -1,0 +1,1019 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fers Innova — Shipping Fee Calculator</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root {
+    --navy: #0B1A2E;
+    --gold: #d08601;
+    --gold-light: #f0a820;
+    --gold-pale: #fff8eb;
+    --white: #ffffff;
+    --gray-100: #f7f8fa;
+    --gray-200: #eef0f3;
+    --gray-400: #9ca3af;
+    --gray-600: #4b5563;
+    --gray-800: #1f2937;
+    --success: #16a34a;
+    --error: #dc2626;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--navy);
+    color: var(--white);
+    min-height: 100vh;
+  }
+
+  /* ── HEADER ── */
+  header {
+    background: var(--navy);
+    border-bottom: 2px solid var(--gold);
+    padding: 18px 32px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .logo-mark {
+    width: 42px; height: 42px;
+    background: var(--gold);
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Playfair Display', serif;
+    font-weight: 700;
+    font-size: 18px;
+    color: var(--navy);
+    flex-shrink: 0;
+  }
+
+  .header-text h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: 17px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+  }
+
+  .header-text p {
+    font-size: 11px;
+    color: var(--gold);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    font-family: 'DM Mono', monospace;
+  }
+
+  .header-badge {
+    margin-left: auto;
+    background: rgba(208,134,1,0.15);
+    border: 1px solid var(--gold);
+    border-radius: 20px;
+    padding: 4px 14px;
+    font-size: 11px;
+    color: var(--gold);
+    font-family: 'DM Mono', monospace;
+    letter-spacing: 0.5px;
+  }
+
+  /* ── MAIN LAYOUT ── */
+  .container {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 32px 24px;
+  }
+
+  /* ── STEP INDICATOR ── */
+  .steps {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    margin-bottom: 36px;
+  }
+
+  .step {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+  }
+
+  .step-num {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    font-weight: 500;
+    border: 2px solid rgba(255,255,255,0.2);
+    color: var(--gray-400);
+    transition: all 0.3s;
+    flex-shrink: 0;
+  }
+
+  .step.active .step-num {
+    background: var(--gold);
+    border-color: var(--gold);
+    color: var(--navy);
+  }
+
+  .step.done .step-num {
+    background: var(--success);
+    border-color: var(--success);
+    color: white;
+  }
+
+  .step-label {
+    font-size: 12px;
+    color: var(--gray-400);
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+  }
+
+  .step.active .step-label { color: var(--gold); }
+  .step.done .step-label { color: var(--white); }
+
+  .step-line {
+    flex: 1;
+    height: 1px;
+    background: rgba(255,255,255,0.15);
+    margin: 0 12px;
+  }
+
+  /* ── CARDS ── */
+  .card {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 14px;
+    padding: 28px;
+    margin-bottom: 20px;
+    transition: border-color 0.3s;
+  }
+
+  .card:hover { border-color: rgba(208,134,1,0.3); }
+
+  .card-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 17px;
+    margin-bottom: 6px;
+    color: var(--white);
+  }
+
+  .card-sub {
+    font-size: 12px;
+    color: var(--gray-400);
+    margin-bottom: 20px;
+    line-height: 1.6;
+  }
+
+  /* ── UPLOAD ZONE ── */
+  .upload-zone {
+    border: 2px dashed rgba(208,134,1,0.4);
+    border-radius: 10px;
+    padding: 36px 24px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s;
+    background: rgba(208,134,1,0.03);
+    position: relative;
+  }
+
+  .upload-zone:hover, .upload-zone.drag-over {
+    border-color: var(--gold);
+    background: rgba(208,134,1,0.07);
+  }
+
+  .upload-zone input[type="file"] {
+    position: absolute; inset: 0;
+    opacity: 0; cursor: pointer; width: 100%; height: 100%;
+  }
+
+  .upload-icon {
+    font-size: 32px;
+    margin-bottom: 10px;
+  }
+
+  .upload-zone p {
+    font-size: 13px;
+    color: var(--gray-400);
+    line-height: 1.6;
+  }
+
+  .upload-zone strong { color: var(--gold); }
+
+  .file-loaded {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: rgba(22,163,74,0.1);
+    border: 1px solid rgba(22,163,74,0.4);
+    border-radius: 8px;
+    padding: 14px 18px;
+    margin-top: 12px;
+  }
+
+  .file-loaded .file-icon { font-size: 20px; }
+  .file-loaded .file-name { font-size: 13px; color: var(--white); }
+  .file-loaded .file-count { font-size: 11px; color: #4ade80; font-family: 'DM Mono', monospace; }
+
+  /* ── TABS ── */
+  .tabs {
+    display: flex;
+    gap: 4px;
+    background: rgba(255,255,255,0.05);
+    border-radius: 10px;
+    padding: 4px;
+    margin-bottom: 20px;
+  }
+
+  .tab {
+    flex: 1;
+    padding: 10px;
+    text-align: center;
+    border-radius: 7px;
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--gray-400);
+    transition: all 0.25s;
+    font-weight: 500;
+  }
+
+  .tab.active {
+    background: var(--gold);
+    color: var(--navy);
+    font-weight: 600;
+  }
+
+  /* ── FORM FIELDS ── */
+  .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-bottom: 14px;
+  }
+
+  .form-group { display: flex; flex-direction: column; gap: 6px; }
+  .form-group.full { grid-column: 1/-1; }
+
+  label {
+    font-size: 11px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--gold);
+    font-family: 'DM Mono', monospace;
+  }
+
+  input, textarea, select {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 8px;
+    padding: 10px 14px;
+    color: var(--white);
+    font-size: 13px;
+    font-family: 'DM Sans', sans-serif;
+    transition: border-color 0.2s;
+    outline: none;
+    width: 100%;
+  }
+
+  input:focus, textarea:focus, select:focus {
+    border-color: var(--gold);
+    background: rgba(208,134,1,0.06);
+  }
+
+  textarea { min-height: 120px; resize: vertical; }
+
+  /* ── ITEMS TABLE ── */
+  .items-header {
+    display: grid;
+    grid-template-columns: 2fr 80px 100px 32px;
+    gap: 8px;
+    padding: 8px 12px;
+    font-size: 10px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--gold);
+    font-family: 'DM Mono', monospace;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    margin-bottom: 8px;
+  }
+
+  .item-row {
+    display: grid;
+    grid-template-columns: 2fr 80px 100px 32px;
+    gap: 8px;
+    margin-bottom: 8px;
+    align-items: center;
+  }
+
+  .item-row input { padding: 8px 10px; font-size: 12px; }
+  .item-fee-display {
+    background: rgba(208,134,1,0.1);
+    border: 1px solid rgba(208,134,1,0.3);
+    border-radius: 8px;
+    padding: 8px 10px;
+    font-size: 12px;
+    color: var(--gold);
+    font-family: 'DM Mono', monospace;
+    min-height: 36px;
+    display: flex;
+    align-items: center;
+  }
+
+  .btn-remove {
+    width: 30px; height: 30px;
+    background: rgba(220,38,38,0.1);
+    border: 1px solid rgba(220,38,38,0.3);
+    border-radius: 6px;
+    color: #f87171;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 15px;
+    transition: all 0.2s;
+  }
+
+  .btn-remove:hover { background: rgba(220,38,38,0.25); }
+
+  /* ── BUTTONS ── */
+  .btn {
+    padding: 12px 24px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .btn-primary {
+    background: var(--gold);
+    color: var(--navy);
+  }
+
+  .btn-primary:hover { background: var(--gold-light); transform: translateY(-1px); }
+  .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+  .btn-secondary {
+    background: rgba(255,255,255,0.08);
+    color: var(--white);
+    border: 1px solid rgba(255,255,255,0.15);
+  }
+
+  .btn-secondary:hover { background: rgba(255,255,255,0.14); }
+
+  .btn-outline {
+    background: transparent;
+    color: var(--gold);
+    border: 1px solid var(--gold);
+  }
+
+  .btn-outline:hover { background: rgba(208,134,1,0.1); }
+
+  .btn-sm { padding: 8px 16px; font-size: 12px; }
+
+  .actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 20px; }
+
+  /* ── RESULTS ── */
+  .result-card {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(208,134,1,0.25);
+    border-radius: 12px;
+    margin-bottom: 14px;
+    overflow: hidden;
+    animation: slideIn 0.3s ease;
+  }
+
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .result-header {
+    background: rgba(208,134,1,0.08);
+    border-bottom: 1px solid rgba(208,134,1,0.2);
+    padding: 12px 18px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .result-name {
+    font-family: 'Playfair Display', serif;
+    font-size: 15px;
+    color: var(--white);
+  }
+
+  .result-inv {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--gold);
+    background: rgba(208,134,1,0.15);
+    padding: 3px 10px;
+    border-radius: 20px;
+  }
+
+  .result-total {
+    font-family: 'DM Mono', monospace;
+    font-size: 14px;
+    color: var(--gold);
+    font-weight: 500;
+  }
+
+  .result-body {
+    padding: 16px 18px;
+  }
+
+  .result-message {
+    font-family: 'DM Mono', monospace;
+    font-size: 11.5px;
+    line-height: 1.8;
+    color: rgba(255,255,255,0.85);
+    white-space: pre-wrap;
+    background: rgba(0,0,0,0.2);
+    border-radius: 8px;
+    padding: 14px;
+    margin-bottom: 12px;
+  }
+
+  .result-actions { display: flex; gap: 8px; }
+
+  /* ── BULK PASTE ── */
+  .bulk-hint {
+    background: rgba(208,134,1,0.07);
+    border: 1px solid rgba(208,134,1,0.2);
+    border-radius: 8px;
+    padding: 12px 16px;
+    font-size: 12px;
+    color: var(--gray-400);
+    margin-bottom: 16px;
+    line-height: 1.6;
+  }
+
+  .bulk-hint strong { color: var(--gold); }
+
+  /* ── SUMMARY BAR ── */
+  .summary-bar {
+    background: linear-gradient(135deg, rgba(208,134,1,0.15), rgba(208,134,1,0.05));
+    border: 1px solid rgba(208,134,1,0.35);
+    border-radius: 12px;
+    padding: 20px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+
+  .summary-stat { text-align: center; }
+  .summary-stat .val {
+    font-family: 'Playfair Display', serif;
+    font-size: 24px;
+    color: var(--gold);
+    display: block;
+  }
+  .summary-stat .lbl {
+    font-size: 10px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--gray-400);
+    font-family: 'DM Mono', monospace;
+  }
+
+  /* ── TOAST ── */
+  .toast {
+    position: fixed;
+    bottom: 24px; right: 24px;
+    background: var(--navy);
+    border: 1px solid var(--gold);
+    border-radius: 10px;
+    padding: 14px 20px;
+    font-size: 13px;
+    color: var(--white);
+    z-index: 9999;
+    animation: toastIn 0.3s ease;
+    display: flex; align-items: center; gap: 10px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  }
+
+  @keyframes toastIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ── SECTION HIDDEN ── */
+  .section { display: none; }
+  .section.active { display: block; }
+
+  /* ── EMPTY STATE ── */
+  .empty {
+    text-align: center;
+    padding: 48px 24px;
+    color: var(--gray-400);
+  }
+  .empty .icon { font-size: 40px; margin-bottom: 12px; }
+  .empty p { font-size: 13px; line-height: 1.7; }
+
+  /* ── MATCH CONFIDENCE ── */
+  .match-good { color: #4ade80; }
+  .match-warn { color: #fbbf24; }
+  .match-none { color: #f87171; }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 640px) {
+    .form-row { grid-template-columns: 1fr; }
+    .steps { overflow-x: auto; }
+    .summary-bar { flex-direction: column; text-align: center; }
+    header { padding: 14px 16px; }
+    .container { padding: 20px 14px; }
+  }
+
+  /* scrollbar */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(208,134,1,0.3); border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo-mark">FI</div>
+  <div class="header-text">
+    <h1>Fers Innova</h1>
+    <p>Shipping Fee Calculator</p>
+  </div>
+  <div class="header-badge" id="productCount">No fee sheet loaded</div>
+</header>
+
+<div class="container">
+
+  <!-- STEPS -->
+  <div class="steps">
+    <div class="step active" id="step1-ind" onclick="goStep(1)">
+      <div class="step-num">1</div>
+      <div class="step-label">Load Fee Sheet</div>
+    </div>
+    <div class="step-line"></div>
+    <div class="step" id="step2-ind" onclick="goStep(2)">
+      <div class="step-num">2</div>
+      <div class="step-label">Enter Invoice</div>
+    </div>
+    <div class="step-line"></div>
+    <div class="step" id="step3-ind" onclick="goStep(3)">
+      <div class="step-num">3</div>
+      <div class="step-label">Results</div>
+    </div>
+  </div>
+
+  <!-- STEP 1: Upload fee sheet -->
+  <div class="section active" id="sec1">
+    <div class="card">
+      <div class="card-title">Upload Shipping Fee Sheet</div>
+      <div class="card-sub">Upload your Excel file. Column B = Product Name, Column F = Estimated Shipping Fee per unit.</div>
+      <div class="upload-zone" id="uploadZone">
+        <input type="file" id="feeFile" accept=".xlsx,.xls" onchange="loadFeeSheet(this)">
+        <div class="upload-icon">📊</div>
+        <p><strong>Click to upload</strong> or drag & drop<br>Excel file (.xlsx or .xls)</p>
+      </div>
+      <div id="fileLoaded" style="display:none"></div>
+    </div>
+    <div class="actions">
+      <button class="btn btn-primary" onclick="goStep(2)" id="toStep2Btn" disabled>Continue →</button>
+    </div>
+  </div>
+
+  <!-- STEP 2: Invoice entry -->
+  <div class="section" id="sec2">
+    <div class="tabs">
+      <div class="tab active" onclick="switchTab('single')">Single Invoice</div>
+      <div class="tab" onclick="switchTab('bulk')">Bulk (Paste Text)</div>
+    </div>
+
+    <!-- SINGLE MODE -->
+    <div id="singleMode">
+      <div class="card">
+        <div class="card-title">Invoice Details</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Customer Name</label>
+            <input type="text" id="custName" placeholder="e.g. Gift Oghosa">
+          </div>
+          <div class="form-group">
+            <label>Invoice Number</label>
+            <input type="text" id="invNum" placeholder="e.g. INV2601003">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Amount Owed (₦) — optional</label>
+            <input type="number" id="amtOwed" placeholder="0">
+          </div>
+          <div class="form-group">
+            <label>Amount Paid toward shipping (₦) — optional</label>
+            <input type="number" id="amtPaid" placeholder="0">
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Items</div>
+        <div class="items-header">
+          <span>Product Name</span>
+          <span>Qty</span>
+          <span>Fee/unit</span>
+          <span></span>
+        </div>
+        <div id="itemsContainer"></div>
+        <button class="btn btn-secondary btn-sm" onclick="addItem()" style="margin-top:8px">+ Add Item</button>
+      </div>
+
+      <div class="actions">
+        <button class="btn btn-primary" onclick="calculateSingle()">Calculate Shipping Fee</button>
+        <button class="btn btn-secondary" onclick="clearSingle()">Clear</button>
+        <button class="btn btn-secondary" onclick="goStep(1)">← Back</button>
+      </div>
+    </div>
+
+    <!-- BULK MODE -->
+    <div id="bulkMode" style="display:none">
+      <div class="card">
+        <div class="bulk-hint">
+          Paste the raw invoice text below — one or multiple invoices. The calculator will extract customer name, invoice number, products and quantities automatically.<br><br>
+          <strong>Tip:</strong> You can paste directly from WhatsApp, PDF copy, or your invoicing app.
+        </div>
+        <div class="form-group">
+          <label>Paste Invoice Text</label>
+          <textarea id="bulkText" placeholder="Paste invoice text here...&#10;&#10;BILL TO&#10;Gift Oghosa&#10;..."></textarea>
+        </div>
+      </div>
+      <div class="actions">
+        <button class="btn btn-primary" onclick="calculateBulk()">Calculate All</button>
+        <button class="btn btn-secondary" onclick="document.getElementById('bulkText').value=''">Clear</button>
+        <button class="btn btn-secondary" onclick="goStep(1)">← Back</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 3: Results -->
+  <div class="section" id="sec3">
+    <div class="summary-bar" id="summaryBar" style="display:none">
+      <div class="summary-stat">
+        <span class="val" id="sumInvoices">0</span>
+        <span class="lbl">Invoices</span>
+      </div>
+      <div class="summary-stat">
+        <span class="val" id="sumTotal">₦0</span>
+        <span class="lbl">Total Shipping</span>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <button class="btn btn-primary btn-sm" onclick="downloadExcel()">⬇ Download Excel Summary</button>
+        <button class="btn btn-outline btn-sm" onclick="copyAll()">📋 Copy All Messages</button>
+        <button class="btn btn-secondary btn-sm" onclick="goStep(2)">← Add More</button>
+      </div>
+    </div>
+    <div id="resultsContainer">
+      <div class="empty">
+        <div class="icon">📦</div>
+        <p>No results yet.<br>Go back and calculate an invoice.</p>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ─── STATE ───
+let feeData = [];       // [{name, fee}]
+let results = [];       // [{name, inv, total, message, owed, paid}]
+let currentTab = 'single';
+let itemCount = 0;
+
+// ─── STEP NAVIGATION ───
+function goStep(n) {
+  if (n === 2 && feeData.length === 0) { showToast('⚠️ Please load a fee sheet first'); return; }
+  [1,2,3].forEach(i => {
+    document.getElementById('sec'+i).classList.toggle('active', i === n);
+    const ind = document.getElementById('step'+i+'-ind');
+    ind.classList.remove('active','done');
+    if (i < n) ind.classList.add('done');
+    if (i === n) ind.classList.add('active');
+  });
+  if (n === 3) renderResults();
+}
+
+// ─── LOAD FEE SHEET ───
+function loadFeeSheet(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const wb = XLSX.read(e.target.result, {type:'array'});
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, {header:1});
+      feeData = [];
+      for (let i = 1; i < rows.length; i++) {
+        const row = rows[i];
+        const name = row[1]; // Column B
+        const fee  = row[5]; // Column F
+        if (name && fee !== undefined && fee !== '') {
+          feeData.push({ name: String(name).trim(), fee: parseFloat(fee) });
+        }
+      }
+      document.getElementById('productCount').textContent = feeData.length + ' products loaded';
+      document.getElementById('fileLoaded').innerHTML = `
+        <div class="file-loaded">
+          <span class="file-icon">✅</span>
+          <div>
+            <div class="file-name">${file.name}</div>
+            <div class="file-count">${feeData.length} products with shipping fees</div>
+          </div>
+        </div>`;
+      document.getElementById('fileLoaded').style.display = 'block';
+      document.getElementById('toStep2Btn').disabled = false;
+      if (document.getElementById('itemsContainer').children.length === 0) addItem();
+    } catch(err) {
+      showToast('❌ Error reading file: ' + err.message);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// ─── FEE LOOKUP (fuzzy match) ───
+function findFee(productName) {
+  if (!productName.trim()) return null;
+  const q = productName.trim().toLowerCase();
+  let best = null, bestScore = 0;
+  for (const p of feeData) {
+    const s = similarity(q, p.name.toLowerCase());
+    if (s > bestScore) { bestScore = s; best = p; }
+  }
+  if (bestScore < 0.25) return null;
+  return { fee: best.fee, name: best.name, score: bestScore };
+}
+
+function similarity(a, b) {
+  // Token overlap similarity
+  const tokA = new Set(a.split(/\s+/).filter(t => t.length > 1));
+  const tokB = new Set(b.split(/\s+/).filter(t => t.length > 1));
+  if (tokA.size === 0 || tokB.size === 0) return 0;
+  let overlap = 0;
+  for (const t of tokA) {
+    for (const s of tokB) {
+      if (s.includes(t) || t.includes(s)) { overlap++; break; }
+    }
+  }
+  return overlap / Math.max(tokA.size, tokB.size);
+}
+
+// ─── TABS ───
+function switchTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', i === (tab==='single'?0:1)));
+  document.getElementById('singleMode').style.display = tab==='single' ? 'block' : 'none';
+  document.getElementById('bulkMode').style.display  = tab==='bulk'   ? 'block' : 'none';
+}
+
+// ─── SINGLE MODE ───
+function addItem() {
+  itemCount++;
+  const id = 'item_' + itemCount;
+  const div = document.createElement('div');
+  div.className = 'item-row';
+  div.id = id;
+  div.innerHTML = `
+    <input type="text" placeholder="Product name..." oninput="updateFee('${id}')" data-field="name">
+    <input type="number" value="1" min="1" oninput="updateFee('${id}')" data-field="qty" style="text-align:center">
+    <div class="item-fee-display" id="fee_${id}">—</div>
+    <button class="btn-remove" onclick="removeItem('${id}')">×</button>`;
+  document.getElementById('itemsContainer').appendChild(div);
+}
+
+function removeItem(id) {
+  const el = document.getElementById(id);
+  if (el) el.remove();
+}
+
+function updateFee(id) {
+  const row = document.getElementById(id);
+  const name = row.querySelector('[data-field="name"]').value;
+  const qty  = parseInt(row.querySelector('[data-field="qty"]').value) || 1;
+  const feeEl = document.getElementById('fee_' + id);
+  if (!name.trim()) { feeEl.textContent = '—'; return; }
+  const match = findFee(name);
+  if (!match) {
+    feeEl.innerHTML = '<span class="match-none">Not found</span>';
+  } else {
+    const rounded = Math.round(match.fee);
+    const total = rounded * qty;
+    const cls = match.score > 0.6 ? 'match-good' : match.score > 0.35 ? 'match-warn' : 'match-none';
+    feeEl.innerHTML = `<span class="${cls}">₦${rounded.toLocaleString()}${qty>1?' × '+qty+' = ₦'+total.toLocaleString():''}</span>`;
+  }
+}
+
+function clearSingle() {
+  document.getElementById('custName').value = '';
+  document.getElementById('invNum').value = '';
+  document.getElementById('amtOwed').value = '';
+  document.getElementById('amtPaid').value = '';
+  document.getElementById('itemsContainer').innerHTML = '';
+  itemCount = 0;
+  addItem();
+}
+
+function calculateSingle() {
+  const name = document.getElementById('custName').value.trim().toUpperCase();
+  const inv  = document.getElementById('invNum').value.trim().toUpperCase();
+  const owed = parseFloat(document.getElementById('amtOwed').value) || 0;
+  const paid = parseFloat(document.getElementById('amtPaid').value) || 0;
+
+  if (!name || !inv) { showToast('⚠️ Please enter customer name and invoice number'); return; }
+
+  const rows = document.querySelectorAll('#itemsContainer .item-row');
+  const items = [];
+  let total = 0;
+
+  for (const row of rows) {
+    const productName = row.querySelector('[data-field="name"]').value.trim();
+    const qty = parseInt(row.querySelector('[data-field="qty"]').value) || 1;
+    if (!productName) continue;
+    const match = findFee(productName);
+    const fee = match ? Math.round(match.fee) : 0;
+    items.push({ name: productName, qty, fee, matched: !!match });
+    total += fee * qty;
+  }
+
+  if (items.length === 0) { showToast('⚠️ Add at least one item'); return; }
+
+  const message = buildMessage(name, inv, items, total, owed, paid);
+  results.push({ name, inv, total, message, owed, paid, items });
+  goStep(3);
+}
+
+// ─── BULK MODE ───
+function calculateBulk() {
+  const text = document.getElementById('bulkText').value.trim();
+  if (!text) { showToast('⚠️ Please paste invoice text'); return; }
+
+  // Split on "BILL TO" or "Invoice Number"
+  const chunks = text.split(/(?=BILL TO|Invoice Number\s*:)/i).filter(c => c.trim().length > 50);
+  if (chunks.length === 0) { showToast('⚠️ Could not detect invoices in text'); return; }
+
+  let processed = 0;
+  for (const chunk of chunks) {
+    const parsed = parseInvoiceText(chunk);
+    if (parsed) {
+      const message = buildMessage(parsed.name, parsed.inv, parsed.items, parsed.total, 0, 0);
+      results.push({ name: parsed.name, inv: parsed.inv, total: parsed.total, message, owed: 0, paid: 0, items: parsed.items });
+      processed++;
+    }
+  }
+
+  if (processed === 0) { showToast('⚠️ Could not parse any invoices. Try single mode.'); return; }
+  showToast('✅ ' + processed + ' invoice(s) calculated');
+  goStep(3);
+}
+
+function parseInvoiceText(text) {
+  // Extract invoice number
+  const invMatch = text.match(/Invoice\s+Number\s*:?\s*(INV[\w\/]+)/i);
+  const inv = invMatch ? invMatch[1].toUpperCase() : 'INV-UNKNOWN';
+
+  // Extract customer name (line after BILL TO)
+  const nameMatch = text.match(/BILL TO\s*\n([^\n+]+)/i);
+  let name = nameMatch ? nameMatch[1].trim().toUpperCase() : 'UNKNOWN';
+
+  // Extract line items — look for lines with numbers and amounts
+  const lines = text.split('\n');
+  const items = [];
+  let total = 0;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
+    // Match: number. Product name ... qty ... amount
+    const itemMatch = line.match(/^(\d+)\s+(.+?)\s+(\d+(?:\.\d+)?)\s+[\d,]+\.\d{2}\s+[\d,]+\.\d{2}$/);
+    if (itemMatch) {
+      const productName = itemMatch[2].trim();
+      const qty = parseInt(itemMatch[3]) || 1;
+      // Skip "Shipping Fee" lines
+      if (/shipping fee/i.test(productName)) continue;
+      const match = findFee(productName);
+      const fee = match ? Math.round(match.fee) : 0;
+      items.push({ name: productName, qty, fee, matched: !!match });
+      total += fee * qty;
+    }
+  }
+
+  if (items.length === 0) return null;
+  return { name, inv, items, total };
+}
+
+// ─── BUILD MESSAGE ───
+function buildMessage(name, inv, items, total, owed, paid) {
+  let msg = `NAME: ${name} ${inv}\nEstimated Shipping Fee Calculation is(₦):\n\n`;
+  items.forEach((item, i) => {
+    const fee = item.fee;
+    msg += `${i+1}. ${item.name}: ₦${fee.toLocaleString()}\n`;
+    if (item.qty > 1) {
+      msg += `${item.qty}×${fee.toLocaleString()}= ₦${(fee*item.qty).toLocaleString()}\n`;
+    }
+  });
+  msg += `\nTOTAL: ₦${total.toLocaleString()}`;
+  if (paid > 0) {
+    const balance = total - paid;
+    msg += `\nAMOUNT PAID: ₦${paid.toLocaleString()}\nBALANCE: ₦${balance.toLocaleString()}`;
+  } else if (owed > 0) {
+    const balance = total + owed;
+    msg += `\nAMOUNT OWED: ₦${owed.toLocaleString()}\nBALANCE: ₦${balance.toLocaleString()}`;
+  }
+  msg += `\n\nThis is the shipping fee account number.\n1309593370\nPROVIDUS BANK\nFERS INNOVA LTD\nThank you for your patronage.\nPlease cross check if none of your item was listed here.`;
+  return msg;
+}
+
+// ─── RENDER RESULTS ───
+function renderResults() {
+  const container = document.getElementById('resultsContainer');
+  if (results.length === 0) {
+    container.innerHTML = `<div class="empty"><div class="icon">📦</div><p>No results yet.<br>Go back and calculate an invoice.</p></div>`;
+    document.getElementById('summaryBar').style.display = 'none';
+    return;
+  }
+
+  const grandTotal = results.reduce((s,r) => s+r.total, 0);
+  document.getElementById('sumInvoices').textContent = results.length;
+  document.getElementById('sumTotal').textContent = '₦' + grandTotal.toLocaleString();
+  document.getElementById('summaryBar').style.display = 'flex';
+
+  container.innerHTML = results.map((r, idx) => `
+    <div class="result-card">
+      <div class="result-header">
+        <div>
+          <div class="result-name">${r.name}</div>
+          <span class="result-inv">${r.inv}</span>
+        </div>
+        <div class="result-total">₦${r.total.toLocaleString()}</div>
+      </div>
+      <div class="result-body">
+        <div class="result-message" id="msg_${idx}">${r.message}</div>
+        <div class="result-actions">
+          <button class="btn btn-primary btn-sm" onclick="copyMsg(${idx})">📋 Copy Message</button>
+          <button class="btn btn-secondary btn-sm" onclick="removeResult(${idx})">🗑 Remove</button>
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+function copyMsg(idx) {
+  navigator.clipboard.writeText(results[idx].message).then(() => showToast('✅ Message copied!'));
+}
+
+function copyAll() {
+  const all = results.map(r => r.message).join('\n\n' + '─'.repeat(40) + '\n\n');
+  navigator.clipboard.writeText(all).then(() => showToast('✅ All messages copied!'));
+}
+
+function removeResult(idx) {
+  results.splice(idx, 1);
+  renderResults();
+}
+
+// ─── DOWNLOAD EXCEL ───
+function downloadExcel() {
+  if (results.length === 0) { showToast('⚠️ No results to export'); return; }
+  const wb = XLSX.utils.book_new();
+  const data = [['S/N', 'Invoice No.', 'Customer Name', 'Shipping Fee (₦)']];
+  results.forEach((r, i) => data.push([i+1, r.inv, r.name, r.total]));
+  const grandTotal = results.reduce((s,r) => s+r.total, 0);
+  data.push(['', '', 'GRAND TOTAL', grandTotal]);
+  const ws = XLSX.utils.aoa_to_sheet(data);
+  ws['!cols'] = [{wch:6},{wch:18},{wch:30},{wch:20}];
+  XLSX.utils.book_append_sheet(wb, ws, 'Shipping Summary');
+  XLSX.writeFile(wb, 'Fers_Innova_Shipping_Summary.xlsx');
+  showToast('✅ Excel downloaded!');
+}
+
+// ─── TOAST ───
+function showToast(msg) {
+  const t = document.createElement('div');
+  t.className = 'toast';
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3000);
+}
+
+// ─── INIT ───
+addItem();
+</script>
+</body>
+</html>
