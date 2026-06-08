@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fers Innova — Shipping Fee Calculator</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<style>
+:root{--navy:#0B1A2E;--gold:#d08601;--gold-light:#f0a820;--white:#fff;--g100:#f7f8fa;--g200:#eef0f3;--g400:#9ca3af;--g600:#4b5563;--green:#16a34a;--red:#dc2626}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans',sans-serif;background:var(--navy);color:var(--white);min-height:100vh}
+header{background:var(--navy);border-bottom:2px solid var(--gold);padding:16px 28px;display:flex;align-items:center;gap:14px;position:sticky;top:0;z-index:100}
+.logo{width:40px;height:40px;background:var(--gold);border-radius:6px;display:flex;align-items:center;justify-content:center;font-family:'Playfair Display',serif;font-weight:700;font-size:17px;color:var(--navy);flex-shrink:0}
+.htext h1{font-family:'Playfair Display',serif;font-size:16px;font-weight:700}
+.htext p{font-size:10px;color:var(--gold);letter-spacing:1.5px;text-transform:uppercase;font-family:'DM Mono',monospace}
+.hbadge{margin-left:auto;background:rgba(208,134,1,.15);border:1px solid var(--gold);border-radius:20px;padding:4px 14px;font-size:11px;color:var(--gold);font-family:'DM Mono',monospace;white-space:nowrap}
+.container{max-width:980px;margin:0 auto;padding:28px 20px}
+.layout{display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start}
+@media(max-width:720px){.layout{grid-template-columns:1fr}}
+
+/* CARDS */
+.card{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:14px;padding:22px;margin-bottom:16px;transition:border-color .3s}
+.card:hover{border-color:rgba(208,134,1,.3)}
+.card-title{font-family:'Playfair Display',serif;font-size:15px;margin-bottom:3px}
+.card-sub{font-size:11px;color:var(--g400);margin-bottom:16px;line-height:1.6}
+
+/* UPLOAD ZONE (fee sheet) */
+.upload-zone{border:2px dashed rgba(208,134,1,.4);border-radius:10px;padding:24px 16px;text-align:center;cursor:pointer;transition:all .3s;background:rgba(208,134,1,.03);position:relative}
+.upload-zone:hover,.upload-zone.drag-over{border-color:var(--gold);background:rgba(208,134,1,.08)}
+.upload-zone input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.upload-zone .uicon{font-size:26px;margin-bottom:6px}
+.upload-zone p{font-size:11px;color:var(--g400);line-height:1.6}
+.upload-zone strong{color:var(--gold)}
+.file-loaded{display:flex;align-items:center;gap:10px;background:rgba(22,163,74,.1);border:1px solid rgba(22,163,74,.35);border-radius:8px;padding:10px 14px;margin-top:10px}
+.file-loaded .fn{font-size:12px;font-weight:500}
+.file-loaded .fc{font-size:10px;color:#4ade80;font-family:'DM Mono',monospace}
+
+/* INPUT TABS */
+.itabs{display:flex;gap:3px;background:rgba(255,255,255,.05);border-radius:9px;padding:3px;margin-bottom:14px}
+.itab{flex:1;padding:9px 6px;text-align:center;border-radius:6px;cursor:pointer;font-size:12px;color:var(--g400);transition:all .2s;font-weight:500}
+.itab.active{background:var(--gold);color:var(--navy);font-weight:600}
+
+/* PDF UPLOAD ZONE */
+.pdf-zone{border:2px dashed rgba(208,134,1,.35);border-radius:10px;padding:32px 20px;text-align:center;cursor:pointer;transition:all .3s;background:rgba(208,134,1,.02);position:relative;min-height:160px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px}
+.pdf-zone:hover,.pdf-zone.drag-over{border-color:var(--gold);background:rgba(208,134,1,.07)}
+.pdf-zone input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.pdf-zone .picon{font-size:32px}
+.pdf-zone p{font-size:12px;color:var(--g400);line-height:1.7}
+.pdf-zone strong{color:var(--gold)}
+.pdf-loaded{background:rgba(208,134,1,.08);border:1px solid rgba(208,134,1,.3);border-radius:8px;padding:10px 14px;margin-top:10px;font-size:11px;color:var(--gold);font-family:'DM Mono',monospace}
+
+/* PROGRESS */
+.progress-bar{width:100%;height:3px;background:rgba(255,255,255,.1);border-radius:2px;margin-top:10px;overflow:hidden;display:none}
+.progress-fill{height:100%;background:var(--gold);border-radius:2px;transition:width .3s;width:0}
+
+/* TEXTAREA */
+textarea{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.15);border-radius:10px;padding:12px 14px;color:var(--white);font-size:12px;font-family:'DM Mono',monospace;line-height:1.7;transition:border-color .2s;outline:none;width:100%;resize:vertical;min-height:240px}
+textarea:focus{border-color:var(--gold);background:rgba(208,134,1,.04)}
+textarea::placeholder{color:rgba(255,255,255,.2)}
+
+label{font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--gold);font-family:'DM Mono',monospace;display:block;margin-bottom:5px}
+
+/* BUTTONS */
+.btn{padding:10px 18px;border-radius:8px;border:none;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;transition:all .2s;display:inline-flex;align-items:center;gap:6px}
+.btn-primary{background:var(--gold);color:var(--navy)}
+.btn-primary:hover{background:var(--gold-light);transform:translateY(-1px)}
+.btn-primary:disabled{opacity:.4;cursor:not-allowed;transform:none}
+.btn-secondary{background:rgba(255,255,255,.08);color:var(--white);border:1px solid rgba(255,255,255,.15)}
+.btn-secondary:hover{background:rgba(255,255,255,.14)}
+.btn-outline{background:transparent;color:var(--gold);border:1px solid var(--gold)}
+.btn-outline:hover{background:rgba(208,134,1,.1)}
+.btn-sm{padding:7px 13px;font-size:11px}
+.btn-danger{background:rgba(220,38,38,.12);color:#f87171;border:1px solid rgba(220,38,38,.3)}
+.btn-danger:hover{background:rgba(220,38,38,.22)}
+.actions{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+
+/* WARN */
+.warn{background:rgba(251,191,36,.07);border:1px solid rgba(251,191,36,.3);border-radius:7px;padding:9px 12px;font-size:11px;color:#fbbf24;margin-bottom:12px;line-height:1.6;font-family:'DM Mono',monospace}
+
+/* RESULTS */
+.results-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px}
+.results-title{font-family:'Playfair Display',serif;font-size:16px}
+.summary-pills{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+.pill{background:rgba(208,134,1,.09);border:1px solid rgba(208,134,1,.22);border-radius:8px;padding:9px 14px;text-align:center;min-width:70px}
+.pill .pv{font-family:'Playfair Display',serif;font-size:18px;color:var(--gold);display:block}
+.pill .pl{font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--g400);font-family:'DM Mono',monospace}
+
+.result-item{background:rgba(255,255,255,.03);border:1px solid rgba(208,134,1,.18);border-radius:10px;margin-bottom:10px;overflow:hidden;animation:slideIn .3s ease}
+@keyframes slideIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.ri-header{background:rgba(208,134,1,.06);border-bottom:1px solid rgba(208,134,1,.12);padding:9px 14px;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.ri-name{font-family:'Playfair Display',serif;font-size:14px}
+.ri-inv{font-family:'DM Mono',monospace;font-size:10px;color:var(--gold);background:rgba(208,134,1,.15);padding:2px 8px;border-radius:20px}
+.ri-total{font-family:'DM Mono',monospace;font-size:13px;color:var(--gold);font-weight:500}
+.ri-body{padding:12px 14px}
+.ri-msg{font-family:'DM Mono',monospace;font-size:11px;line-height:1.8;color:rgba(255,255,255,.82);white-space:pre-wrap;background:rgba(0,0,0,.2);border-radius:7px;padding:12px;margin-bottom:10px}
+.ri-footer{display:flex;gap:7px;flex-wrap:wrap;align-items:center}
+.unmatched-note{font-size:10px;color:#fbbf24;font-family:'DM Mono',monospace;margin-bottom:8px}
+
+.empty{text-align:center;padding:48px 16px;color:var(--g400)}
+.empty .ei{font-size:36px;margin-bottom:10px}
+.empty p{font-size:12px;line-height:1.7}
+
+/* TOAST */
+.toast{position:fixed;bottom:20px;right:20px;background:var(--navy);border:1px solid var(--gold);border-radius:10px;padding:11px 16px;font-size:12px;color:var(--white);z-index:9999;animation:toastIn .3s ease;box-shadow:0 8px 32px rgba(0,0,0,.4);max-width:280px}
+@keyframes toastIn{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+
+/* SPINNER */
+.spinner{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.3);border-top-color:var(--white);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">FI</div>
+  <div class="htext">
+    <h1>Fers Innova</h1>
+    <p>Shipping Fee Calculator</p>
+  </div>
+  <div class="hbadge" id="productCount">No fee sheet loaded</div>
+</header>
+
+<div class="container">
+  <div class="layout">
+
+    <!-- LEFT COLUMN -->
+    <div>
+      <!-- Fee Sheet Upload -->
+      <div class="card">
+        <div class="card-title">① Shipping Fee Sheet</div>
+        <div class="card-sub">Upload your Excel file — Column B = Product Name, Column F = Shipping Fee</div>
+        <div class="upload-zone">
+          <input type="file" id="feeFile" accept=".xlsx,.xls" onchange="loadFeeSheet(this)">
+          <div class="uicon">📊</div>
+          <p><strong>Click to upload</strong> or drag & drop<br>Excel file (.xlsx or .xls)</p>
+        </div>
+        <div id="fileLoaded" style="display:none"></div>
+      </div>
+
+      <!-- Invoice Input -->
+      <div class="card">
+        <div class="card-title">② Invoice Input</div>
+        <div class="card-sub">Upload a PDF or paste invoice text directly. Supports single or multiple invoices.</div>
+
+        <div id="noSheetWarn" class="warn">⚠ Upload your fee sheet above before calculating.</div>
+
+        <!-- Tabs -->
+        <div class="itabs">
+          <div class="itab active" onclick="switchInputTab('pdf')">📄 Upload PDF</div>
+          <div class="itab" onclick="switchInputTab('text')">✏️ Paste Text</div>
+        </div>
+
+        <!-- PDF TAB -->
+        <div id="pdfTab">
+          <div class="pdf-zone" id="pdfZone">
+            <input type="file" id="pdfFile" accept=".pdf" onchange="handlePdfUpload(this)">
+            <div class="picon">📑</div>
+            <p><strong>Click to upload PDF</strong> or drag & drop<br>Supports multi-page invoice PDFs</p>
+          </div>
+          <div id="pdfLoaded" style="display:none"></div>
+          <div class="progress-bar" id="progressBar">
+            <div class="progress-fill" id="progressFill"></div>
+          </div>
+          <div class="actions">
+            <button class="btn btn-primary" id="calcPdfBtn" onclick="calculateFromPdf()" disabled>
+              <span id="calcPdfLabel">⚡ Calculate from PDF</span>
+            </button>
+            <button class="btn btn-secondary btn-sm" onclick="clearPdf()">Clear</button>
+          </div>
+        </div>
+
+        <!-- TEXT TAB -->
+        <div id="textTab" style="display:none">
+          <label>Paste Invoice Text</label>
+          <textarea id="invoiceText" placeholder="BILL TO&#10;Customer Name&#10;+234 xxx xxx xxxx&#10;Invoice Number :INV2601036&#10;...&#10;&#10;You can paste multiple invoices at once."></textarea>
+          <div class="actions">
+            <button class="btn btn-primary" id="calcTextBtn" onclick="calculateFromText()" disabled>⚡ Calculate</button>
+            <button class="btn btn-secondary btn-sm" onclick="document.getElementById('invoiceText').value=''">Clear</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT COLUMN: RESULTS -->
+    <div>
+      <div class="results-header">
+        <div class="results-title">Results</div>
+        <div style="display:flex;gap:7px;flex-wrap:wrap" id="globalActions" style="display:none">
+          <button class="btn btn-primary btn-sm" onclick="downloadExcel()">⬇ Excel</button>
+          <button class="btn btn-outline btn-sm" onclick="copyAll()">📋 Copy All</button>
+          <button class="btn btn-danger btn-sm" onclick="clearAll()">🗑 Clear</button>
+        </div>
+      </div>
+
+      <div class="summary-pills" id="summaryPills" style="display:none">
+        <div class="pill"><span class="pv" id="sumCount">0</span><span class="pl">Invoices</span></div>
+        <div class="pill"><span class="pv" id="sumTotal">₦0</span><span class="pl">Total</span></div>
+        <div class="pill"><span class="pv" id="sumOwing">₦0</span><span class="pl">Outstanding</span></div>
+      </div>
+
+      <div id="resultsContainer">
+        <div class="empty">
+          <div class="ei">📦</div>
+          <p>Upload a PDF or paste invoice text,<br>then click Calculate.</p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ─── PDF.js setup ───
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+// ─── STATE ───
+let feeData = [];
+let results = [];
+let pdfText = '';
+let currentPdfFile = null;
+
+// ─── FEE SHEET ───
+function loadFeeSheet(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const wb = XLSX.read(e.target.result, {type:'array'});
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, {header:1});
+      feeData = [];
+      for (let i = 1; i < rows.length; i++) {
+        const row = rows[i];
+        const name = row[1], fee = row[5];
+        if (name && fee !== undefined && fee !== '') {
+          feeData.push({name: String(name).trim(), fee: parseFloat(fee)});
+        }
+      }
+      document.getElementById('productCount').textContent = feeData.length + ' products loaded';
+      document.getElementById('fileLoaded').innerHTML = `
+        <div class="file-loaded" style="margin-top:10px">
+          <span>✅</span>
+          <div><div class="fn">${file.name}</div><div class="fc">${feeData.length} products loaded</div></div>
+        </div>`;
+      document.getElementById('fileLoaded').style.display = 'block';
+      document.getElementById('calcPdfBtn').disabled = false;
+      document.getElementById('calcTextBtn').disabled = false;
+      document.getElementById('noSheetWarn').style.display = 'none';
+    } catch(err) { showToast('❌ Error reading Excel: ' + err.message); }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// ─── PDF HANDLING ───
+async function handlePdfUpload(input) {
+  const file = input.files[0];
+  if (!file) return;
+  currentPdfFile = file;
+  document.getElementById('pdfLoaded').style.display = 'none';
+  document.getElementById('progressBar').style.display = 'block';
+  document.getElementById('progressFill').style.width = '0%';
+
+  try {
+    pdfText = await extractPdfText(file, (pct) => {
+      document.getElementById('progressFill').style.width = pct + '%';
+    });
+
+    document.getElementById('progressBar').style.display = 'none';
+    document.getElementById('pdfLoaded').style.display = 'block';
+
+    // Count invoices detected
+    const chunks = pdfText.split(/(?=BILL\s+TO)/i).filter(c => c.trim().length > 30);
+    document.getElementById('pdfLoaded').innerHTML = `
+      <div class="pdf-loaded">
+        📑 ${file.name}<br>
+        ~${chunks.length} invoice${chunks.length !== 1 ? 's' : ''} detected · ${Math.round(pdfText.length/1000)}k chars extracted
+      </div>`;
+    showToast(`✅ PDF loaded — ${chunks.length} invoice(s) detected`);
+  } catch(err) {
+    document.getElementById('progressBar').style.display = 'none';
+    showToast('❌ PDF error: ' + err.message);
+  }
+}
+
+async function extractPdfText(file, onProgress) {
+  const arrayBuffer = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({data: arrayBuffer}).promise;
+  let fullText = '';
+  for (let p = 1; p <= pdf.numPages; p++) {
+    const page = await pdf.getPage(p);
+    const content = await page.getTextContent();
+    // Reconstruct text with line breaks based on y-position
+    const items = content.items;
+    let lastY = null;
+    let pageText = '';
+    for (const item of items) {
+      const y = item.transform[5];
+      if (lastY !== null && Math.abs(y - lastY) > 3) pageText += '\n';
+      pageText += item.str;
+      lastY = y;
+    }
+    fullText += pageText + '\n\n';
+    if (onProgress) onProgress(Math.round((p / pdf.numPages) * 100));
+  }
+  return fullText;
+}
+
+function clearPdf() {
+  pdfText = '';
+  currentPdfFile = null;
+  document.getElementById('pdfFile').value = '';
+  document.getElementById('pdfLoaded').style.display = 'none';
+  document.getElementById('progressBar').style.display = 'none';
+}
+
+// ─── INPUT TABS ───
+function switchInputTab(tab) {
+  document.querySelectorAll('.itab').forEach((t,i) => t.classList.toggle('active', (tab==='pdf'&&i===0)||(tab==='text'&&i===1)));
+  document.getElementById('pdfTab').style.display = tab==='pdf' ? 'block' : 'none';
+  document.getElementById('textTab').style.display = tab==='text' ? 'block' : 'none';
+}
+
+// ─── CALCULATE ───
+function calculateFromPdf() {
+  if (!pdfText) { showToast('⚠ Upload a PDF first'); return; }
+  if (!feeData.length) { showToast('⚠ Upload fee sheet first'); return; }
+  processText(pdfText);
+}
+
+function calculateFromText() {
+  const text = document.getElementById('invoiceText').value.trim();
+  if (!text) { showToast('⚠ Paste some invoice text first'); return; }
+  if (!feeData.length) { showToast('⚠ Upload fee sheet first'); return; }
+  processText(text);
+}
+
+function processText(text) {
+  const parsed = parseInvoices(text);
+  if (!parsed.length) { showToast('⚠ No invoices detected. Check the format.'); return; }
+
+  let added = 0;
+  for (const inv of parsed) {
+    const calcItems = [];
+    let total = 0;
+    const unmatched = [];
+
+    for (const item of inv.items) {
+      const match = findFee(item.name);
+      if (match && match.skip) continue;
+      const fee = match ? Math.round(match.fee) : 0;
+      if (!match) unmatched.push(item.name);
+      calcItems.push({name: item.name, qty: item.qty, fee, matched: !!match});
+      total += fee * item.qty;
+    }
+
+    if (calcItems.length === 0 && total === 0) continue;
+
+    const message = buildMessage(inv.name, inv.inv, calcItems, total, inv.productOwed);
+    results.unshift({name: inv.name, inv: inv.inv, total, message, unmatched, productOwed: inv.productOwed});
+    added++;
+  }
+
+  if (added === 0) { showToast('⚠ Could not extract items from invoice(s).'); return; }
+  renderResults();
+  showToast(`✅ ${added} invoice${added>1?'s':''} calculated`);
+  document.getElementById('invoiceText').value = '';
+}
+
+// ─── PARSE INVOICES ───
+function parseInvoices(text) {
+  const chunks = text.split(/(?=BILL\s+TO)/i).filter(c => c.trim().length > 30);
+  return chunks.map(parseOneInvoice).filter(Boolean);
+}
+
+function parseOneInvoice(text) {
+  const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+
+  // Customer name
+  let name = 'UNKNOWN';
+  for (let i = 0; i < lines.length; i++) {
+    if (/^BILL\s+TO$/i.test(lines[i])) {
+      for (let k = i+1; k < Math.min(i+4, lines.length); k++) {
+        const c = lines[k];
+        if (!c) continue;
+        if (/^SHIP\s+TO$/i.test(c)) break;
+        if (/^[+\d\s\-()]+$/.test(c)) continue;
+        if (/^Invoice/i.test(c)) break;
+        name = c.replace(/[🥰❣️💕✈️🔥]+/g,'').trim().toUpperCase();
+        break;
+      }
+      break;
+    }
+  }
+
+  // Invoice number
+  let inv = '';
+  const invM = text.match(/Invoice\s+Number\s*:?\s*([A-Za-z0-9\/\-_]+)/i);
+  if (invM) inv = invM[1].trim().toUpperCase();
+
+  // Outstanding product balance
+  let productOwed = 0;
+  const balM = text.match(/Balance\s*[\r\n\s]*₦?\s*([\d,]+(?:\.\d+)?)/i);
+  if (balM) productOwed = parseFloat(balM[1].replace(/,/g,''));
+
+  // Extract items
+  const items = extractItems(text, lines);
+
+  return items.length > 0 ? {name, inv, items, productOwed} : null;
+}
+
+function extractItems(text, lines) {
+  const items = [];
+
+  // Strategy 1: single-line pattern "1 Product Name 1.00 9,000.00 9,000.00"
+  // Use row number to deduplicate only truly identical rows, not same-name variants
+  const singleLine = /^(\d+)\s+(.+?)\s+(\d+(?:\.\d+)?)\s+[\d,]+\.\d{2}\s+[\d,]+\.\d{2}$/gm;
+  const seenRowNums = new Set();
+  let m;
+  while ((m = singleLine.exec(text)) !== null) {
+    const rowNum = parseInt(m[1]);
+    const pname = m[2].trim();
+    const qty = Math.round(parseFloat(m[3])) || 1;
+    if (isSkippableLine(pname)) continue;
+    if (seenRowNums.has(rowNum)) continue; // only skip exact duplicate row numbers
+    seenRowNums.add(rowNum);
+    items.push({name: cleanName(pname), qty});
+  }
+
+  if (items.length > 0) return items;
+
+  // Strategy 2: multi-line table — find numbered rows
+  // Key fix: use row NUMBER to deduplicate, not product name
+  const seenRows = new Set();
+  let inTable = false;
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (/Sr\.?\s*no/i.test(line) || /^Product$/i.test(line)) { inTable = true; continue; }
+    if (/^Please\s+Note/i.test(line) || /^Total\s+[\d₦]/.test(line)) { inTable = false; continue; }
+    if (!inTable) continue;
+
+    const rowM = line.match(/^(\d+)\s+(.+)$/);
+    if (!rowM) continue;
+    const rowNum = parseInt(rowM[1]);
+    if (seenRows.has(rowNum)) continue;
+    seenRows.add(rowNum);
+
+    let productParts = [rowM[2].trim()];
+    let j = i + 1;
+    while (j < lines.length) {
+      const next = lines[j];
+      if (/^\d+\s+\S/.test(next)) break;
+      if (/^(Please|Total|Grand|Balance|Amount|Sr\.?\s*no)/i.test(next)) break;
+      if (/^[\d,]+\.\d{2}/.test(next)) { productParts.push(next); j++; break; }
+      // Absorb color/variant lines into product name
+      if (/^(Black|Brown|Pink|White|Blue|Red|Nude|Gray|Gold|Silver|Purple|Green|Beige|Coffee|Dark|Light|Off)/i.test(next)) {
+        productParts[0] += ' ' + next;
+      } else {
+        productParts.push(next);
+      }
+      j++;
+    }
+
+    const combined = productParts.join(' ');
+    const nums = [...combined.matchAll(/([\d,]+\.\d{2})/g)].map(x => parseFloat(x[1].replace(/,/g,'')));
+    const qty = nums.length >= 2 ? Math.round(nums[0]) : 1;
+    const beforeNum = combined.replace(/([\d,]+\.\d{2}).*$/, '').trim();
+    const pname = cleanName(beforeNum);
+
+    if (pname.length > 1 && !isSkippableLine(pname)) {
+      items.push({name: pname, qty});
+    }
+    i = j - 1;
+  }
+
+  return items;
+}
+
+function isSkippableLine(name) {
+  return /^(please|total|grand|paid|balance|amount|shipping\s*fee|sr\.?\s*no|product|qty|rate|note|invoice|dokpesi|payable|banking|providus|fers\s+innova)/i.test(name.trim())
+    || /including\s+shipping/i.test(name)
+    || name.trim().length < 2;
+}
+
+function cleanName(name) {
+  return name
+    .replace(/\*+/g,' ')
+    .replace(/\s+/g,' ')
+    .replace(/^\d+\s*/, '')
+    .trim();
+}
+
+// ─── FEE LOOKUP ───
+function findFee(productName) {
+  if (!productName || productName.trim().length < 2) return null;
+  const q = productName.trim().toLowerCase();
+  if (/^shipping\s*fee$/i.test(q)) return {fee:0, skip:true};
+  if (/including\s+shipping/i.test(q)) return {fee:0, skip:true};
+
+  let best = null, bestScore = 0;
+  for (const p of feeData) {
+    const s = tokenSim(q, p.name.toLowerCase());
+    if (s > bestScore) { bestScore = s; best = p; }
+  }
+  return bestScore >= 0.2 ? {fee: best.fee, name: best.name, score: bestScore} : null;
+}
+
+function tokenSim(a, b) {
+  const stopwords = new Set(['and','with','of','the','for','in','a','an','set','deal','black','brown','pink','white','blue','red','gold','silver','purple','gray','nude','xl','xs','sm','ml','g','pcs','psc','box']);
+  const ta = new Set(a.split(/[\s,*\-]+/).filter(t => t.length > 1 && !stopwords.has(t)));
+  const tb = new Set(b.split(/[\s,*\-]+/).filter(t => t.length > 1 && !stopwords.has(t)));
+  if (ta.size === 0 || tb.size === 0) return 0;
+  let overlap = 0;
+  for (const t of ta) {
+    for (const s of tb) {
+      if (s.includes(t) || t.includes(s)) { overlap++; break; }
+    }
+  }
+  return overlap / Math.max(ta.size, tb.size);
+}
+
+// ─── BUILD MESSAGE ───
+function buildMessage(name, inv, items, total, productOwed) {
+  let msg = `NAME: ${name} ${inv}\nEstimated Shipping Fee Calculation is(₦):\n\n`;
+  items.forEach((item, idx) => {
+    msg += `${idx+1}. ${item.name}: ₦${item.fee.toLocaleString()}\n`;
+    if (item.qty > 1) msg += `${item.qty}×${item.fee.toLocaleString()}= ₦${(item.fee*item.qty).toLocaleString()}\n`;
+  });
+  msg += `\n*TOTAL: ₦${total.toLocaleString()}*`;
+  if (productOwed > 0) {
+    msg += `\n*AMOUNT OWED: ₦${productOwed.toLocaleString()}*\n*BALANCE: ₦${(total + productOwed).toLocaleString()}*`;
+  }
+  msg += `\n\nThis is the shipping fee account number.\n1309593370\nPROVIDUS BANK\nFERS INNOVA LTD\nThank you for your patronage.\nPlease cross check if none of your item was listed here.`;
+  return msg;
+}
+
+// ─── RENDER ───
+function renderResults() {
+  const c = document.getElementById('resultsContainer');
+  if (!results.length) {
+    c.innerHTML = `<div class="empty"><div class="ei">📦</div><p>Upload a PDF or paste invoice text,<br>then click Calculate.</p></div>`;
+    document.getElementById('globalActions').style.display = 'none';
+    document.getElementById('summaryPills').style.display = 'none';
+    return;
+  }
+
+  const grandTotal = results.reduce((s,r) => s+r.total, 0);
+  const totalOwing = results.reduce((s,r) => s + (r.productOwed > 0 ? r.total + r.productOwed : 0), 0);
+  document.getElementById('sumCount').textContent = results.length;
+  document.getElementById('sumTotal').textContent = '₦' + grandTotal.toLocaleString();
+  document.getElementById('sumOwing').textContent = '₦' + totalOwing.toLocaleString();
+  document.getElementById('summaryPills').style.display = 'flex';
+  document.getElementById('globalActions').style.display = 'flex';
+
+  c.innerHTML = results.map((r, idx) => `
+    <div class="result-item">
+      <div class="ri-header">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <div class="ri-name">${r.name}</div>
+          <span class="ri-inv">${r.inv || '—'}</span>
+        </div>
+        <div class="ri-total">₦${r.total.toLocaleString()}</div>
+      </div>
+      <div class="ri-body">
+        ${r.unmatched.length ? `<div class="unmatched-note">⚠ Not matched: ${r.unmatched.slice(0,3).join(', ')}${r.unmatched.length>3?'…':''}</div>` : ''}
+        <div class="ri-msg">${r.message}</div>
+        <div class="ri-footer">
+          <button class="btn btn-primary btn-sm" onclick="copyMsg(${idx})">📋 Copy</button>
+          <button class="btn btn-danger btn-sm" onclick="removeResult(${idx})">× Remove</button>
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+function copyMsg(idx) {
+  navigator.clipboard.writeText(results[idx].message).then(() => showToast('✅ Copied!'));
+}
+
+function copyAll() {
+  const all = results.map(r => r.message).join('\n\n' + '─'.repeat(40) + '\n\n');
+  navigator.clipboard.writeText(all).then(() => showToast('✅ All messages copied!'));
+}
+
+function removeResult(idx) { results.splice(idx,1); renderResults(); }
+function clearAll() { results = []; renderResults(); }
+
+function downloadExcel() {
+  if (!results.length) { showToast('⚠ No results'); return; }
+  const wb = XLSX.utils.book_new();
+  const rows = [['S/N','Invoice No.','Customer Name','Shipping Fee (₦)','Shipping Paid (₦)','Outstanding (₦)']];
+  results.forEach((r,i) => {
+    const paid = r.productOwed > 0 ? 0 : r.total;
+    const out = r.productOwed > 0 ? r.total + r.productOwed : 0;
+    rows.push([i+1, r.inv, r.name, r.total, paid, out]);
+  });
+  rows.push(['','','GRAND TOTAL', results.reduce((s,r)=>s+r.total,0),'','']);
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols'] = [{wch:5},{wch:16},{wch:28},{wch:18},{wch:18},{wch:16}];
+  XLSX.utils.book_append_sheet(wb, ws, 'Shipping Summary');
+  XLSX.writeFile(wb, 'Fers_Innova_Shipping.xlsx');
+  showToast('✅ Excel downloaded!');
+}
+
+function showToast(msg) {
+  const t = document.createElement('div');
+  t.className = 'toast'; t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3200);
+}
+</script>
+</body>
+</html>
